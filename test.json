@@ -1,0 +1,56 @@
+{
+  "SecurityGroups": [
+    {
+      "Description": "airtek TG sg",
+      "GroupName": "air-tek-tg-sg",
+      "IpPermissions": [
+        {
+          "FromPort": 80,
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "ToPort": 80,
+          "UserIdGroupPairs": [
+            { "GroupId": "sg-054c3e94b9fa4ce3b", "UserId": "211486217040" }
+          ]
+        },
+        {
+          "FromPort": 22,
+          "IpProtocol": "tcp",
+          "IpRanges": [{ "CidrIp": "0.0.0.0/0", "Description": "simple http" }],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "ToPort": 22,
+          "UserIdGroupPairs": []
+        }
+      ],
+      "OwnerId": "211486217040",
+      "GroupId": "sg-026c3d7ba26ef27a9",
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [{ "CidrIp": "0.0.0.0/0" }],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ],
+      "Tags": [{ "Key": "hello-world-service", "Value": "air-tek-tg-sg" }],
+      "VpcId": "vpc-d2204aba"
+    }
+  ],
+  "ResponseMetadata": {
+    "RequestId": "274f35ea-a66b-4227-9886-142cb2dfa71e",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+      "x-amzn-requestid": "274f35ea-a66b-4227-9886-142cb2dfa71e",
+      "content-type": "text/xml;charset=UTF-8",
+      "content-length": "2298",
+      "vary": "accept-encoding",
+      "date": "Wed, 22 Jul 2020 13:45:55 GMT",
+      "server": "AmazonEC2"
+    },
+    "RetryAttempts": 0
+  }
+}
