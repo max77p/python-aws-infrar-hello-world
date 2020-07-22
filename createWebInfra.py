@@ -69,7 +69,6 @@ except Exception as e:
 
 try:
     print("\nCreating Target Group SG....")
-    print(security_group_ELB['GroupId'])
     security_group_TG = clientEC2.create_security_group(
         Description='airtek TG sg',
         GroupName='air-tek-tg-sg',
@@ -188,7 +187,12 @@ except Exception as e:
 # ------ CREATE EC2 ------
 # -----------------------------------------------
 user_data = '''#!/bin/bash
-echo 'test' > /tmp/hello'''
+                sudo apt-get update
+                sudo apt install python3-pip -y
+                sudo apt-get install nginx -y
+                sudo apt-get install gunicorn3 -y
+                sudo pip3 install flask
+            '''
 try:
     print("getting security group id for instance...")
     print(security_group_TG['GroupId'])

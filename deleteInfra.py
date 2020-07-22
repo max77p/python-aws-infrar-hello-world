@@ -123,6 +123,42 @@ try:
 except Exception as e:
     print("\nELB not found")
 
+try:
+    get_instance = clientEC2.describe_instances(
+        Filters=[
+            {
+                'Name': 'tag:hello-world-service',
+                'Values': [
+                    'air-tek-instance',
+                ]
+            },
+            {
+                'Name': 'instance-state-name',
+                'Values': [
+                    'running'
+                ]
+            }
+        ],
+    )
+    print("Number of instances found: {}\n".format(len(get_instance['Reservations'])))
+    terminate_instance = None
+    for main in get_instance['Reservations']:
+        terminate_instance = clientEC2.terminate_instances(
+            InstanceIds=[
+                main['Instances'][0]['InstanceId'],
+            ],
+            DryRun=False
+        )
+        waiterTerminateInstance = clientEC2.get_waiter('instance_terminated')
+        waiterTerminateInstance.wait(
+            InstanceIds=[
+                main['Instances'][0]['InstanceId'],
+            ],
+            DryRun=False,
+        )
+        print("Instance terminated: {}\n".format(main['Instances'][0]['InstanceId']))
+except Exception as e:
+    print("\nInstance not found")
 
 try:
     get_tg_sg = clientEC2.describe_security_groups(
@@ -160,32 +196,3 @@ except Exception as e:
     print(e)
     print("\nELB SG not found")
 
-try:
-    get_instance = clientEC2.describe_instances(
-        Filters=[
-            {
-                'Name': 'tag:hello-world-service',
-                'Values': [
-                    'air-tek-instance',
-                ]
-            },
-            {
-                'Name': 'instance-state-name',
-                'Values': [
-                    'running'
-                ]
-            }
-        ],
-    )
-    print("Number of instances found: {}\n".format(len(get_instance['Reservations'])))
-    terminate_instance = None
-    for main in get_instance['Reservations']:
-        terminate_instance = clientEC2.terminate_instances(
-            InstanceIds=[
-                main['Instances'][0]['InstanceId'],
-            ],
-            DryRun=False
-        )
-
-except Exception as e:
-    print("\nInstance not found")
