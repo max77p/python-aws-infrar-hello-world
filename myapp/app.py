@@ -1,4 +1,5 @@
 from flask import Flask, render_template
+import logging
 
 # Flask is the constructor which accepts the name of the current module
 app = Flask(__name__)
@@ -8,7 +9,6 @@ app = Flask(__name__)
 @app.route("/")
 def home():
     # rendering home.html from templates directory
-    app.logger.info("Status: 200")
     return render_template("home.html", value='200')
 
 if __name__ == "__main__":
