@@ -2,8 +2,9 @@
 ### Features
     1. EC2 Ubuntu server
     2. Nginx
-    3. Application Load Balancer with Target Group
-    4. Security Group to only allow access through ALB
+    3. Python Flask application - very basic
+    4. Application Load Balancer with Target Group
+    5. Security Group to only allow access through ALB
 
 ### How to replicate
     1. Change sampleConfig.ini to config.ini and fill out the relevant information - without quotes
