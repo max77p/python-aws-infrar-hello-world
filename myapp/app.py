@@ -1,5 +1,4 @@
 from flask import Flask, render_template
-import logging
 
 # Flask is the constructor which accepts the name of the current module
 app = Flask(__name__)
