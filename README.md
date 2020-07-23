@@ -6,7 +6,7 @@
     4. Security Group to only allow access through ALB
 
 ### How to replicate
-    1. Change smapleConfig.ini to config.ini and fill out the relevant information - without quotes
+    1. Change sampleConfig.ini to config.ini and fill out the relevant information - without quotes
     2. Run python createWebInfra.py
-    3. Wait for the setup to compelte before visiting the application link (should be same as ALB DNS Name)
+    3. Wait for the setup to complete before visiting the application link (should be same as ALB DNS Name)
     4. Run python deleteInfra.py to destroy all resources
