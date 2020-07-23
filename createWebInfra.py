@@ -6,23 +6,31 @@ clientELB = boto3.client('elbv2')
 clientEC2 = boto3.client('ec2')
 resourceEC2 = boto3.resource('ec2')
 
-
+# ---------------------------------------------------------------
+# ------ GET SECRETS FROM config.ini FILE -----------------------
+# ---------------------------------------------------------------
 def getVarFromFile(filename):
     global data, file
     mainfile = config.read(filename)
     data = config['DEFAULT']
-
-
+    
 getVarFromFile('config.ini')
 
-# -----------------------------------------------
-# ------ CREATE SECURITY GROUP ELB and TG------
-# -----------------------------------------------
+# ******************* STEPS ***********************************************************
+# ------ 1. Create SG's for ELB and TG with tags and ingress rules --------------------
+# ------ 2. Create ELB, attach listener, security groups and configure targer group ---
+# ------ 3. Setup UserData bash script to pass into instance creation -----------------
+# ------ 4. Create Instance, attach SG and target group -------------------------------
+# ******************* STEPS ***********************************************************
+
+# ---------------------------------------------------------------
+# ------ CREATION OF ELB-SG -------------------------------------
+# ---------------------------------------------------------------
 security_group_ELB = None
 security_group_TG = None
 target_group = None
 try:
-    print("\nCreating ELB SG....")
+    print("Creating ELB SG....")
     security_group_ELB = clientEC2.create_security_group(
         Description='airtek ELB sg',
         GroupName='air-tek-elb-sg',
@@ -61,14 +69,17 @@ try:
         IpProtocol='tcp',
         DryRun=False
     )
-    print("Security Group CREATED: {}\n".format(security_group_ELB['GroupId']))
+    print("ELB Security Group CREATED: {}\n".format(security_group_ELB['GroupId']))
 
 except Exception as e:
     print(e)
-    print("Can't create SG")
+    print("Can't create ELB-SG")
 
+# ---------------------------------------------------------------
+# ------ CREATE TG-SG -------------------------------------------
+# ---------------------------------------------------------------
 try:
-    print("\nCreating Target Group SG....")
+    print("Creating Target Group SG....")
     security_group_TG = clientEC2.create_security_group(
         Description='airtek TG sg',
         GroupName='air-tek-tg-sg',
@@ -121,15 +132,15 @@ try:
         ],
         DryRun=False
     )
-    print("Security Group CREATED: {}\n".format(security_group_TG['GroupId']))
+    print("TG Security Group CREATED: {}\n".format(security_group_TG['GroupId']))
 
 except Exception as e:
     print(e)
-    print("Can't create TG and SG")
+    print("Can't create TG-SG")
 
-# -----------------------------------------------
-# ------ CREATE LOAD BALANCER ------
-# -----------------------------------------------
+# ---------------------------------------------------------------
+# ------ CREATE ELB, LISTENER, TARGETGROUP, ---------------------
+# ---------------------------------------------------------------
 load_balancer_main=None
 try:
     load_balancer_main = clientELB.create_load_balancer(
@@ -157,16 +168,15 @@ try:
         ]
     )
     print("ELB CREATED: {}\n".format(load_balancer_main['LoadBalancers'][0]['LoadBalancerArn']))
-
+    print("Creating Target Group...")
     target_group = clientELB.create_target_group(
         Name='air-tek-tg',
         Protocol='HTTP',
         Port=80,
         VpcId=data['VPC_ID']
     )
-    print(target_group)
     print("Target Group CREATED: {}\n".format(target_group['TargetGroups'][0]['TargetGroupArn']))
-
+    print("Creating Listener....")
     listener = clientELB.create_listener(
         LoadBalancerArn=load_balancer_main['LoadBalancers'][0]['LoadBalancerArn'],
         Protocol='HTTP',
@@ -182,11 +192,12 @@ try:
 
 except Exception as e:
     print(e)
-    print("Can't create ELB,TargetGroup or Listener")
+    print("Error creating ELB, TargetGroup or Listener")
 
-# -----------------------------------------------
-# ------ CREATE EC2 ------
-# -----------------------------------------------
+# ---------------------------------------------------------------
+# ------ SETUP USERDATA BASH SCRIPT -----------------------------
+# ------ Note: Pass in DNS name of ELB for Nginx server block ---
+# ---------------------------------------------------------------
 load_balancer_DNS_Name=load_balancer_main['LoadBalancers'][0]['DNSName']
 user_data = '''#!/bin/bash
 #The line below is important!
@@ -222,9 +233,11 @@ sudo gunicorn3 app:app
 echo Started app
 ''' % load_balancer_DNS_Name
 
+# ---------------------------------------------------------------
+# ------ CREATE INSTANCE ----------------------------------------
+# ---------------------------------------------------------------
 try:
-    print("getting security group id for instance...")
-    print(security_group_TG['GroupId'])
+    print("Creating Instance....")
     create_instance = resourceEC2.create_instances(
         ImageId = data['ImageId_value'],
         MinCount = 1,
@@ -252,9 +265,9 @@ try:
         ],
         KeyName = data['KeyName_value']
     )
-    print("Created Instance ID: {}\n".format(create_instance[0].id))
+    print("Instance CREATED: {}\n".format(create_instance[0].id))
     instance = resourceEC2.Instance(create_instance[0].id)
-    print("Instance is creating...\n")
+    print("Instance Is Starting...")
     instance.wait_until_running(
         Filters=[
             {
@@ -266,10 +279,10 @@ try:
         ],
         DryRun=False
     )
-    print("Instance Created!\n")
-    print("Registering Target...\n")
+    print("Instance RUNNING!\n")
+    print("Registering Target...")
     register_targets = clientELB.register_targets(
-    TargetGroupArn=target_group['TargetGroups'][0]['TargetGroupArn'],
+        TargetGroupArn=target_group['TargetGroups'][0]['TargetGroupArn'],
         Targets=[
             {
                 'Id': create_instance[0].id,
@@ -277,7 +290,25 @@ try:
             },
         ]
     )
+    target_attribute_change = clientELB.modify_target_group_attributes(
+        TargetGroupArn=target_group['TargetGroups'][0]['TargetGroupArn'],
+        Attributes=[
+            {
+                'Key': 'deregistration_delay.timeout_seconds',
+                'Value': '100'
+            },
+        ]
+    )
     print("Target Group registered!\n")
+    print("Waiting For UserData To Complete...")
+    waiterInstanceStatus = clientEC2.get_waiter('instance_status_ok')
+    waiterInstanceStatus.wait(
+        InstanceIds=[
+            create_instance[0].id,
+        ],
+        DryRun=False,
+    )
+    
     print("ALL COMPLETE")
     print("Application created and available at: http://{}\n".format(load_balancer_DNS_Name))
 except Exception as e:
