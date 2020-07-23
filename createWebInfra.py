@@ -130,6 +130,7 @@ except Exception as e:
 # -----------------------------------------------
 # ------ CREATE LOAD BALANCER ------
 # -----------------------------------------------
+load_balancer_main=None
 try:
     load_balancer_main = clientELB.create_load_balancer(
         Name='air-tek-elb',
@@ -186,13 +187,41 @@ except Exception as e:
 # -----------------------------------------------
 # ------ CREATE EC2 ------
 # -----------------------------------------------
+load_balancer_DNS_Name=load_balancer_main['LoadBalancers'][0]['DNSName']
 user_data = '''#!/bin/bash
-                sudo apt-get update
-                sudo apt install python3-pip -y
-                sudo apt-get install nginx -y
-                sudo apt-get install gunicorn3 -y
-                sudo pip3 install flask
-            '''
+#The line below is important!
+exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+echo BEGIN
+apt-get update
+apt install python3-pip -y
+apt-get install nginx -y
+apt-get install gunicorn3 -y
+pip3 install flask
+apt-get install git
+cd home
+git clone https://github.com/max77p/python-aws-infrar-hello-world.git
+mv python-aws-infrar-hello-world/ mainapp/
+cd /etc/nginx/sites-enabled/
+cat > flaskapp <<EOF 
+server {
+        listen 80;
+        server_name %s;
+
+        location / {
+            proxy_pass http://127.0.0.1:8000;
+        }
+} 
+EOF
+sed -i    's/# server_names_hash_bucket_size 64;/server_names_hash_bucket_size 128;/g' /etc/nginx/nginx.conf
+sudo systemctl restart nginx
+cd
+cd /home/mainapp/myapp/
+touch test.json
+echo created file
+sudo gunicorn3 app:app
+echo Started app
+''' % load_balancer_DNS_Name
+
 try:
     print("getting security group id for instance...")
     print(security_group_TG['GroupId'])
@@ -237,7 +266,8 @@ try:
         ],
         DryRun=False
     )
-    print("Registering target...\n")
+    print("Instance Created!\n")
+    print("Registering Target...\n")
     register_targets = clientELB.register_targets(
     TargetGroupArn=target_group['TargetGroups'][0]['TargetGroupArn'],
         Targets=[
@@ -247,7 +277,9 @@ try:
             },
         ]
     )
-
+    print("Target Group registered!\n")
+    print("ALL COMPLETE")
+    print("Application created and available at: http://{}\n".format(load_balancer_DNS_Name))
 except Exception as e:
     print(e)
     print("Can't create Instance")
