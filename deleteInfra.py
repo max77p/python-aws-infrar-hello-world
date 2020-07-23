@@ -90,16 +90,12 @@ try:
         print("Deleting Target Group...")
     else:# If not registered with any instance
         print("Deleting Target Group...")
-        # delete_tg = clientELB.delete_target_group(
-        #     TargetGroupArn=get_tg['TargetGroups'][0]['TargetGroupArn']
-        # )
-        # print("Target group was deleted: {}\n".format(delete_tg))
 except Exception as e:
     print(e)
     print("Instances Not Found\n")
 
 # ---------------------------------------------------------------
-# ------ GET LISTENER DETAILS and DELETE LISTENER and TG --------
+# ------ GET DELETE LISTENER and TARGET GROUP -------------------
 # ---------------------------------------------------------------
 try:
     get_elb = clientELB.describe_load_balancers(
