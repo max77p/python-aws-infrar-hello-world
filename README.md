@@ -1,8 +1,8 @@
 # Hello world application spun up using python boto3 and flask and nginx
 ### Features
-    1. EC2 Ubuntu server
+    1. EC2 Instance
     2. Nginx
-    3. Python Flask application - very basic
+    3. Python Flask
     4. Application Load Balancer with Target Group
     5. Security Group to only allow access through ALB
 
